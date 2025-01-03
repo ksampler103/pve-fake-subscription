@@ -10,9 +10,9 @@ Disables the "No valid subscription" dialog on all Proxmox products.
 
 Works for:
 
-- Proxmox VE (5.x or later, tested up to 8.x)
+- Proxmox VE (5.x or later; 3.x and 4.x [require some manual actions](#compatibility-information-for-old-proxmox-ve-versions))
 - Proxmox Mail Gateway (5.x or later)
-- Proxmox Backup Server (1.x)
+- Proxmox Backup Server (1.x or later)
 
 Highlights:
 
@@ -22,7 +22,9 @@ Highlights:
 - Comes with standard Debian package, easy to manage and automate
 - **No JavaScript is involved** in the whole process, as I believe JavaScript is harmful to developers
 
-## Installation / Usage
+## Usage
+
+### Installation
 
 1. [Download the latest release](https://github.com/ksampler103/pve-fake-subscription/releases/latest)
 1. Install: run `dpkg -i pve-fake-subscription_*.deb` as root on every node
@@ -38,7 +40,7 @@ The fake subscription status doesn't grant you free access to the enterprise rep
 - [Proxmox Mail Gateway (PMG)](https://pmg.proxmox.com/pmg-docs/pmg-admin-guide.html#pmg_package_repositories)
 - [Proxmox Backup Server (PBS)](https://pbs.proxmox.com/docs/installation.html#proxmox-backup-no-subscription-repository)
 
-## Uninstallation
+### Uninstallation
 
 Run as root:
 
@@ -48,10 +50,49 @@ apt purge pve-fake-subscription
 
 This will revert your system to a "no subscription key" status.
 
-## Building the Package
+## Development Notes
+
+### Building the Package
 
 Install [nFPM](https://nfpm.goreleaser.com/install/), then:
 
 ```shell
 ./package.sh
+```
+
+### Compatibility Information for Old Proxmox VE Versions
+
+#### PVE 4.x
+
+After installation or updates, run:
+```shell
+sed -i'' -e's/pve8p/pve4p/g' /usr/bin/pve-fake-subscription
+pve-fake-subscription
+```
+
+#### PVE 3.x
+
+Installation with `dpkg -i` will not work because of missing dependencies. Use the following script to install manually:
+```shell
+# extract the deb package
+mkdir -p /tmp/pve-fake-subscription
+dpkg-deb -x pve-fake-subscription_*.deb /tmp/pve-fake-subscription
+
+# patch and install the script
+sed -i'' -e's/python3/python/g' -e's/pve8p/pve4p/g' /tmp/pve-fake-subscription/usr/bin/pve-fake-subscription
+mv /tmp/pve-fake-subscription/usr/bin/pve-fake-subscription /usr/local/bin/
+
+# install the timer
+ln -sf /usr/local/bin/pve-fake-subscription /etc/cron.hourly/pve-fake-subscription
+
+# invoke it once
+/usr/local/bin/pve-fake-subscription
+
+# remove temporary files
+rm -rf /tmp/pve-fake-subscription
+```
+
+Removal:
+```shell
+rm -f /usr/local/bin/pve-fake-subscription /etc/cron.hourly/pve-fake-subscription /etc/subscription
 ```
